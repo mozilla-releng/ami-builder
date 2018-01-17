@@ -1,78 +1,50 @@
 version: 0
-metadata:
-    name: 'ami-builder'
-    description: 'build vanilla amis from iso images'
-    owner: '{{event.head.user.email}}'
-    source: '{{event.head.repo.url}}'
 tasks:
-    - provisionerId: '{{taskcluster.docker.provisionerId}}'
-      routes:
-          - 'index.project.releng.ami-builder.v1.revision.{{event.head.sha}}.validation'
-      workerType: '{{taskcluster.docker.workerType}}'
-      extra:
-          github:
-              env: true
-              events:
-                  - pull_request.*
-                  - push
-          data:
-              base:
-                  sha: '{{event.base.sha}}'
-                  user:
-                      login: '{{event.base.user.login}}'
-              head:
-                  sha: '{{event.head.sha}}'
-                  user:
-                      email: '{{event.head.user.email}}'
-      payload:
-          maxRunTime: 600
-          image: 'mozilla-releng/ami-builder'
-          command:
-              - '/bin/bash'
-              - '--login'
-              - '-c'
-              - 'git clone --quiet {{event.head.repo.url}} && git --git-dir=./ami-builder/.git --work-tree=./ami-builder fetch && git --git-dir=./ami-builder/.git --work-tree=./ami-builder checkout {{event.head.repo.branch}} && ./ami-builder/ci/validate.sh'
-      metadata:
-          name: 'Validate submission'
-          description: 'todo: run a linter against json and powershell files'
-          owner: '{{event.head.user.email}}'
-          source: '{{event.head.repo.url}}'
-
-    - provisionerId: '{{taskcluster.docker.provisionerId}}'
-      scopes:
-          - secrets:get:repo:github.com/mozilla-releng/ami-builder:build-ami
-      routes:
-          - 'index.project.releng.ami-builder.v1.revision.{{event.head.sha}}.build-ami'
-      workerType: '{{taskcluster.docker.workerType}}'
-      extra:
-          github:
-              env: true
-              events:
-                  - push
-              branches:
-                - master
-          data:
-              head:
-                  sha: '{{event.head.sha}}'
-                  user:
-                      email: '{{event.head.user.email}}'
-      payload:
-          maxRunTime: 10800
-          image: 'hashicorp/packer:light'
-          features:
-              taskclusterProxy: true
-          command:
-              - '/bin/bash'
-              - '--login'
-              - '-c'
-              - 'git clone --quiet {{event.head.repo.url}} && ./ami-builder/ci/build-ami.sh'
-          artifacts:
-              'public/log':
-                  type: directory
-                  path: './log'
-                  expires: "{{ '1 year' | $fromNow }}"
-      metadata:
-          name: 'Build vanilla AMI from ISO'
-          description: 'todo: implement'
-          owner: '{{event.head.user.email}}'
-          source: '{{event.head.repo.url}}'
+  - provisionerId: '{{ taskcluster.docker.provisionerId }}'
+    workerType: '{{ taskcluster.docker.workerType }}'
+    extra:
+      github:
+        events:
+          - pull_request.opened
+          - pull_request.reopened
+          - pull_request.synchronize
+    payload:
+      maxRunTime: 3600
+      image: python
+      command:
+        - /bin/bash
+        - '--login'
+        - '-c'
+        - >-
+          git clone {{event.head.repo.url}} repo && cd repo && git config
+          advice.detachedHead false && git checkout {{event.head.sha}} && pip
+          install tox && tox
+    metadata:
+      name: validate
+      description: run linters and validations against new code commits
+      owner: '{{ event.head.user.email }}'
+      source: '{{ event.head.repo.url }}'
+  - provisionerId: '{{ taskcluster.docker.provisionerId }}'
+    workerType: '{{ taskcluster.docker.workerType }}'
+    extra:
+      github:
+        events:
+          - pull_request.closed
+          - push
+    payload:
+      maxRunTime: 3600
+      image: python
+      command:
+        - /bin/bash
+        - '--login'
+        - '-c'
+        - >-
+          git clone {{event.head.repo.url}} repo && cd repo && git config
+          advice.detachedHead false && git checkout {{event.head.sha}} && pip
+          install tox && tox
+    metadata:
+      name: build-ami
+      description: create a new ec2 ami from an iso image
+      owner: '{{ event.head.user.email }}'
+      source: '{{ event.head.repo.url }}'
+allowPullRequests: public
