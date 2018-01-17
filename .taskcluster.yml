@@ -5,9 +5,8 @@ tasks:
     extra:
       github:
         events:
-          - pull_request.opened
-          - pull_request.reopened
-          - pull_request.synchronize
+          - pull_request.*
+          - push
     payload:
       maxRunTime: 3600
       image: python
@@ -16,9 +15,11 @@ tasks:
         - '--login'
         - '-c'
         - >-
-          git clone {{event.head.repo.url}} repo && cd repo && git config
-          advice.detachedHead false && git checkout {{event.head.sha}} && pip
-          install tox && tox
+          git clone {{event.head.repo.url}} repo &&
+          cd repo &&
+          git config advice.detachedHead false &&
+          git checkout {{event.head.sha}} &&
+          ./ci/validate.sh
     metadata:
       name: validate
       description: run linters and validations against new code commits
@@ -29,7 +30,6 @@ tasks:
     extra:
       github:
         events:
-          - pull_request.closed
           - push
     payload:
       maxRunTime: 3600
@@ -39,9 +39,11 @@ tasks:
         - '--login'
         - '-c'
         - >-
-          git clone {{event.head.repo.url}} repo && cd repo && git config
-          advice.detachedHead false && git checkout {{event.head.sha}} && pip
-          install tox && tox
+          git clone {{event.head.repo.url}} repo &&
+          cd repo &&
+          git config advice.detachedHead false &&
+          git checkout {{event.head.sha}} &&
+          ./ci/build-ami.sh
     metadata:
       name: build-ami
       description: create a new ec2 ami from an iso image
