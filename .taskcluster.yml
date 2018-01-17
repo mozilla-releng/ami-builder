@@ -9,7 +9,7 @@ tasks:
           - push
     payload:
       maxRunTime: 3600
-      image: grenade/opencloudconfig
+      image: grenade/ami-builder
       command:
         - /bin/bash
         - '--login'
@@ -33,7 +33,7 @@ tasks:
           - push
     payload:
       maxRunTime: 3600
-      image: hashicorp/packer:light
+      image: grenade/ami-builder
       command:
         - /bin/bash
         - '--login'
