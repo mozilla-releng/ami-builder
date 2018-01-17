@@ -9,7 +9,7 @@ tasks:
           - push
     payload:
       maxRunTime: 3600
-      image: python
+      image: grenade/opencloudconfig
       command:
         - /bin/bash
         - '--login'
@@ -33,7 +33,7 @@ tasks:
           - push
     payload:
       maxRunTime: 3600
-      image: python
+      image: hashicorp/packer:light
       command:
         - /bin/bash
         - '--login'
